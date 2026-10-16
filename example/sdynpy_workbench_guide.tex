@@ -1,0 +1,343 @@
+%& /home/nidish/.cache/org-persist/68/5fd8a5-b6d6-4a24-975a-23886e29fbed-e9f9d88bdb88b18339c275ebf647acd9
+% Created 2026-10-16 Fri 18:58
+% Intended LaTeX compiler: pdflatex
+\documentclass[11pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{capt-of}
+\usepackage{hyperref}
+\usepackage{graphicx}
+\usepackage{wrapfig}
+\usepackage{rotating}
+\usepackage{longtable}
+\usepackage[margin=1in]{geometry}
+\usepackage[subrefformat=parens,labelformat=parens]{subcaption}
+\usepackage{siunitx}
+\usepackage{xcolor}
+\usepackage{accents}
+\usepackage{minted}
+\usepackage{cancel}
+\newcommand{\vc}[1]{\underbar{$#1$}}
+\newcommand{\mx}[1]{\mathbf{\underline{\underbar{$#1$}}}\,}
+\newcommand{\uc}[1]{\underaccent{\tilde}{#1}}
+\usepackage{cleveref}
+\hypersetup{colorlinks=true,linkcolor=blue,urlcolor=blue,citecolor=blue}
+
+%% ox-latex features:
+%   !announce-start, !guess-pollyglossia, !guess-babel, !guess-inputenc,
+%   caption, image, !announce-end.
+
+\usepackage{capt-of}
+
+\usepackage{graphicx}
+
+%% end ox-latex features
+
+
+% end precompiled preamble
+\ifcsname endofdump\endcsname\endofdump\fi
+
+\author{Nidish Narayanaa Balaji}
+\date{October 16, 2026}
+\title{SDynPy Workbench\\\medskip
+\large User Guide and Example Workflow}
+\hypersetup{
+ pdfauthor={Nidish Narayanaa Balaji},
+ pdftitle={SDynPy Workbench},
+ pdfkeywords={},
+ pdfsubject={},
+ pdfcreator={},
+ pdflang={English}}
+\begin{document}
+
+\maketitle
+\setcounter{tocdepth}{2}
+\tableofcontents
+
+\section*{Introduction}
+\label{sec:org96fad66}
+The \textbf{SDynPy Workbench} is a graphical front end built around \href{https://sandialabs.github.io/sdynpy/}{SDynPy} for organizing the main stages of experimental modal analysis and finite-element (FE) mode-shape expansion. It brings geometry editing, frequency-response-function (FRF) inspection, modal curve fitting, shape visualization, FE data handling, SEREP expansion, and project saving into one desktop application.
+
+This guide demonstrates a representative workflow using impact-hammer modal-test data from a metallic bowl and an FE model prepared in \href{https://open-simulation-center.org/fr/downloads/code\_aster/SALOME\_MECA}{Salome-Meca} with Code\_Aster. The experimental setup has two response sensors and eight impact locations. The measured FRFs are curve-fitted to estimate experimental mode shapes; the FE modes are then used as a basis to expand those shapes using the \textbf{System Equivalent Reduction Expansion Process (SEREP)} implemented through SDynPy.
+
+The example is deliberately workflow-oriented. Your file formats, channel directions, node identifiers, selected modes, and geometry may differ. Check each mapping before running the expansion.
+\section{Workflow at a glance}
+\label{sec:orgf6af0c7}
+
+The recommended sequence for the example is:
+
+\begin{enumerate}
+\item Launch the Workbench.
+\item Load the FE mesh and identify the nodes corresponding to the test locations.
+\item Build the test geometry, including node ordering, tracelines, and local coordinate systems.
+\item Load and inspect the measured FRFs.
+\item Fit the experimental data using PolyPy (or SMAC, where appropriate).
+\item Plot the fitted shapes and collect them into the Workbench project.
+\item Map test node identifiers to the corresponding FE node identifiers.
+\item Load the FE mode shapes and select a suitable expansion basis.
+\item Run SEREP, inspect the expanded shapes, and compare them with the FE modes using MAC.
+\item Save the project so the session can be resumed later.
+\end{enumerate}
+
+\begin{quote}
+\textbf{Important:} SEREP depends on a consistent relationship between the experimental coordinates and the FE model. Before expanding shapes, verify node identity, node ordering, coordinate directions, and the selected FE basis. A visually plausible plot alone does not prove that the mapping is correct.
+\end{quote}
+\section{Launch the Workbench}
+\label{sec:org9c618dd}
+
+Run the application from the directory containing the Workbench scripts:
+
+\begin{verbatim}
+python3 sdynpy_workbench.py
+\end{verbatim}
+
+The application is built on SDynPy and uses Qt for the desktop interface, Matplotlib for plotting, and PyVista/VTK for 3-D visualization. The companion modules \texttt{serep\_tools.py} and \texttt{project\_io.py} must be available alongside \texttt{sdynpy\_workbench.py} (or otherwise importable by Python). The required Python packages must already be installed in the environment used to launch the program.
+
+\begin{figure}[!htbp]
+\centering
+\includegraphics[width=0.92\linewidth]{figs/wb1.png}
+\caption{\label{fig:wb1}SDynPy Workbench launch screen.}
+\end{figure}
+
+The main window is organized around a project tree, a central workspace for tool windows, and a log panel. The project tree summarizes the data currently loaded; the log panel is useful when checking progress or diagnosing an error. SDynPy tool windows are hosted inside the Workbench workspace so that related plots and editors can be arranged together.
+\subsection{Ways to get started}
+\label{sec:orgd7a7d7c}
+
+There are two common starting points:
+
+\begin{itemize}
+\item \textbf{FRFs first:} use \texttt{Load FRFs} to load measured frequency-response functions, then inspect them with \texttt{Plot FRFs} and fit them with \texttt{PolyPy} or \texttt{SMAC}. Without geometry, you can still inspect data and perform fitting, but you cannot meaningfully display the resulting shapes on a test geometry.
+\item \textbf{Geometry first:} use \texttt{Geometry Editor} to create or edit nodes, coordinate systems, tracelines, and elements. Geometry can also be imported or generated using the Geometry menu. Once geometry and FRFs are available, the fitted shapes can be visualized on that geometry.
+\end{itemize}
+
+For the FE-assisted workflow described below, load the FE mesh first so that the test geometry can be built from known FE nodes.
+\section{Prepare the finite-element and test geometries}
+\label{sec:org6d2977a}
+
+\subsection{Load the FE mesh}
+\label{sec:org03d7648}
+
+\begin{enumerate}
+\item Click \texttt{FE Mesh} on the SEREP toolbar (or use the corresponding FE/SEREP menu command).
+\item Select the mesh file. The Workbench accepts MED-family files such as \texttt{.med} and \texttt{.rmed}.
+\item Confirm that the mesh and its node groups have been read correctly.
+\end{enumerate}
+
+In this example, the result file \texttt{resu.rmed} contains the mesh and the node group associated with the experimental sensor locations. The group shown in the screenshot is named \texttt{Group\_3}. Group names depend on how the mesh was created and exported; select the group that actually contains the required test nodes in your model.
+
+\begin{figure}[!htbp]
+\centering
+\includegraphics[width=0.92\linewidth]{figs/femesh.png}
+\caption{\label{fig:femesh}Workbench after loading the FE mesh and inspecting the available node groups.}
+\end{figure}
+
+The mesh viewer and group list are intended to help identify the relevant nodes. If the expected group is absent, check the groups or tags exported with the mesh. You can also enter a custom list of FE node IDs in the sensor-mapping tool.
+\subsection{Build the test geometry}
+\label{sec:org337d556}
+
+Click \texttt{Test Geom} to open the geometry builder. This creates a test geometry from a subset of the FE mesh nodes.
+
+\begin{figure}[!htbp]
+\centering
+\includegraphics[width=0.92\linewidth]{figs/testgeom.png}
+\caption{\label{fig:testgeom}Test-geometry builder opened from the loaded FE mesh.}
+\end{figure}
+
+Follow these steps in the builder:
+
+\begin{enumerate}
+\item \textbf{Select the node group.} Click \texttt{Add group} and choose the group containing the test locations. Check that the highlighted nodes are the intended measurement locations.
+\item \textbf{Match the experimental ordering.} Reorder or renumber the selected nodes so that their sequence matches the test-data channel/node ordering. This is important: a correct set of nodes in the wrong order can still produce an incorrect mapping.
+\item \textbf{Create tracelines.} Add tracelines to connect nodes in a useful order for visualization. Tracelines help display the geometry; they do not replace the node mapping required for SEREP.
+\item Click \texttt{Build test geometry} to create the geometry.
+\end{enumerate}
+
+\begin{figure}[!htbp]
+\centering
+\includegraphics[width=0.92\linewidth]{figs/testgeomar.png}
+\caption{\label{fig:testgeomar}Test geometry displayed in the SDynPy Geometry Editor, with degree-of-freedom arrows enabled.}
+\end{figure}
+
+Open \texttt{Geometry Editor} to inspect the result. Use \texttt{Show DOF Arrows} to check the local coordinate systems and directions at the measurement locations. For measurements made along local sensor axes, make sure those axes are consistent with the directions represented by the FRF channels and the FE degrees of freedom.
+\subsection{Alternative geometry workflows}
+\label{sec:org5a666a6}
+
+The Workbench also supports several ways to create or edit geometry:
+
+\begin{itemize}
+\item \texttt{Geometry Editor} opens SDynPy's interactive geometry editor for editing nodes, coordinate systems, tracelines, and elements.
+\item \texttt{Generate ring of sensors...} creates a ring of nodes, with configurable node count, diameter, height, coordinate-system convention, and an optional closed traceline.
+\item \texttt{Import nodes from CSV...} imports nodal coordinates. The expected columns are \texttt{id, x, y, z}, with optional \texttt{def\_cs} and \texttt{disp\_cs} columns.
+\item \texttt{Import UFF/UNV geometry...} imports geometry from a UFF/UNV file.
+\item \texttt{Plot geometry} displays the current geometry.
+\end{itemize}
+
+These options are useful when no suitable FE mesh is available or when the experimental geometry needs to be prepared independently.
+\section{Load and inspect the measured FRFs}
+\label{sec:org8ed5b16}
+
+Use \texttt{Load FRFs (UFF)...} to import measured FRFs from a Universal File Format (UFF/UNV) file containing dataset-58 records. The loading dialog includes options for channel interpretation:
+
+\begin{itemize}
+\item \textbf{Force direction to:} retain directions from the file, or set all reference/response directions to X+, Y+, or Z+. Only override the directions when you know how the exported data should be interpreted.
+\item \textbf{Swap response / reference columns:} use this when the file stores the two coordinates in the opposite order to the convention expected by SDynPy. Check the data-export convention rather than toggling this option blindly.
+\item \textbf{Symmetrize FRFs:} where offered, the Workbench can symmetrize a square measurement matrix or a selected square block. This averages reciprocal terms using the ordinary transpose, not the conjugate transpose. Symmetrization is appropriate only when reciprocity and compatible measurement coordinates/directions are expected; it is not a substitute for checking poor-quality data.
+\end{itemize}
+
+After loading, use \texttt{Plot FRFs} to inspect the frequency-response functions. Look for missing channels, unexpected amplitudes, inconsistent trends, and suspicious frequency ranges before fitting. The \texttt{Plot CMIF} command provides another view of the multichannel frequency-response data. \texttt{Check channels against geometry} can help identify mismatches between data coordinates and the current geometry.
+\section{Conduct modal curve fitting with PolyPy}
+\label{sec:orgbb6382a}
+
+Click \texttt{PolyPy} (or use \texttt{Modal -> PolyPy curve fitter}) to open the SDynPy PolyPy fitting interface. PolyPy is part of SDynPy; consult the \href{https://sandialabs.github.io/sdynpy/sdynpy-polypy-gui/}{SDynPy PolyPy documentation} for the detailed meaning of the fitting controls and parameters.
+
+Fit the measured FRFs over the frequency range of interest. Review the fitted poles and shapes using the PolyPy interface rather than accepting every candidate automatically. The appropriate fit settings depend on the measurement quality, frequency range, and modal density of the structure.
+
+\begin{figure}[!htbp]
+\centering
+\includegraphics[width=0.92\linewidth]{figs/polypy.png}
+\caption{\label{fig:polypy}Example state of the PolyPy interface after modal fitting.}
+\end{figure}
+
+The Workbench also provides a \texttt{SMAC curve fitter} command. Use the fitter that best suits your data and workflow; the screenshots in this example document the PolyPy route.
+\section{Visualize and collect the experimental mode shapes}
+\label{sec:org7f7c46a}
+
+Within the PolyPy window, click \texttt{Plot Shapes} to visualize the fitted mode shapes on the test geometry.
+
+\begin{figure}[!htbp]
+\centering
+\includegraphics[width=0.92\linewidth]{figs/pshapes.png}
+\caption{\label{fig:testshapes}Example of a fitted experimental mode shape plotted on the test geometry.}
+\end{figure}
+
+Inspect the mode shape and its spatial pattern. Confirm that the displayed motion is consistent with the expected geometry and measurement directions. When satisfied with the fit, click \texttt{Collect Shapes} in the Workbench toolbar (or use \texttt{Modal -> Collect shapes from PolyPy}). The collected shapes are then represented in the project tree and become available for the expansion workflow.
+
+Collecting shapes transfers the fitted results into the Workbench project; it does not by itself perform the SEREP expansion.
+\section{Map the test nodes to the FE model}
+\label{sec:org4d8b821}
+
+The experimental test geometry and the FE geometry may use different node identifiers. SEREP needs the Workbench to know which experimental/test node corresponds to which FE node. This is a correspondence problem, not merely a cosmetic renumbering operation.
+
+\begin{enumerate}
+\item Click \texttt{Groups} on the SEREP toolbar to open the FE-group and sensor-mapping tool.
+\item Select the group containing the measurement nodes. The selected group is highlighted in the 3-D view.
+\item Check the table mapping each test node to an FE node. The tool can order ring-like groups by angle around the global Z axis, reverse the order, and apply a start offset. These controls are conveniences; they do not guarantee the ordering matches your physical sensor numbering.
+\item Inspect the node labels in the 3-D view and edit the FE-node entries if required. If necessary, use \texttt{Custom node IDs...} to specify the FE nodes explicitly.
+\item Confirm that the number of mapped nodes matches the number of test nodes, and that no two test nodes are unintentionally assigned the same FE node.
+\item Click \texttt{Apply: renumber test FRFs / shapes / geometry} to apply the mapping. Use \texttt{Undo last renumbering} if you need to revert the last mapping operation.
+\end{enumerate}
+
+\begin{figure}[!htbp]
+\centering
+\includegraphics[width=0.92\linewidth]{figs/renum.png}
+\caption{\label{fig:renum}FE-group selection and node-mapping table.}
+\end{figure}
+
+In the example, the node mapping is inspected and applied before the FE modes are loaded and SEREP is run. If the mapping tool does not show the expected nodes or groups, reload the FE mesh and check the exported mesh groups.
+
+\begin{quote}
+\textbf{Mapping checklist}
+\begin{itemize}
+\item Every test node has a corresponding FE node.
+\item The ordering follows the experimental channel/node convention.
+\item Node IDs refer to the intended physical locations, not merely nodes with similar coordinates.
+\item Coordinate directions and local axes are consistent between test and FE data.
+\end{itemize}
+\end{quote}
+\section{Load the FE mode shapes}
+\label{sec:orgda69c4f}
+
+Click \texttt{FE Modes} and select the result file containing the FE modal results. In this example, the file is \texttt{resu.rmed}. The Workbench loads the FE mode shapes for use as the SEREP expansion basis.
+
+If available, use \texttt{FE/SEREP -> Plot FE Modes} to visualize the FE mode shapes and check that the mode set and geometry look reasonable before expansion. Confirm that the FE modal results correspond to the same FE model and node numbering as the mesh used to build the test geometry.
+\section{Run SEREP}
+\label{sec:org6334193}
+
+Click \texttt{SEREP} to open the expansion-basis selection dialog. The dialog lists the FE modes and their frequencies and allows you to select which modes to use as the basis.
+
+\begin{figure}[!htbp]
+\centering
+\includegraphics[width=0.82\linewidth]{figs/serepmodes.png}
+\caption{\label{fig:serepmodes}SEREP dialog for selecting the FE modes used as the expansion basis.}
+\end{figure}
+
+For the example shown here, modes 7, 8, 9, and 10 are selected. This is an example-specific choice, not a universal recommendation. Select a basis that is appropriate for the frequency range and physics of the test, and check the resulting expansion for sensitivity to the basis selection.
+
+The dialog supports selecting individual modes, ranges (for example, \texttt{7-10}), all modes, no modes, or an inverted selection. It also offers a frequency threshold for selecting modes above a specified frequency. The interface warns when the number of selected modes exceeds the number of test degrees of freedom, since that can make the expansion ill-posed.
+
+After confirming the selection, the Workbench performs the SEREP expansion and displays the expanded mode shapes.
+\section{Inspect the expanded shapes}
+\label{sec:org2d6b956}
+
+Click \texttt{Overlay} to compare the experimental test shapes with their SEREP-expanded counterparts.
+
+\begin{figure}[!htbp]
+\centering
+\includegraphics[width=0.92\linewidth]{figs/overlay.png}
+\caption{\label{fig:overlay}Experimental test shapes and SEREP-expanded shapes shown together.}
+\end{figure}
+
+Use the overlay to check whether the expanded shape reproduces the measured motion at the test locations and whether the full-field pattern is physically plausible. Pay attention to apparent sign/phase differences, coordinate conventions, and node correspondence when interpreting the comparison.
+
+You can also plot the expanded shapes on the FE geometry using the corresponding FE/SEREP plotting command. Visualization is a diagnostic aid; it should be interpreted together with the data mapping, basis selection, and quantitative comparison.
+\section{Compare shapes using the Modal Assurance Criterion}
+\label{sec:orge763f4d}
+
+The Modal Assurance Criterion (MAC) quantifies the correlation between two mode shapes. In the Workbench, use \texttt{FE/SEREP -> Plot MAC: expanded vs FE modes} to compare the SEREP-expanded experimental shapes against the FE mode shapes.
+
+\begin{figure}[!htbp]
+\centering
+\includegraphics[width=0.92\linewidth]{figs/mac.png}
+\caption{\label{fig:mac}MAC comparison between SEREP-expanded test shapes and FE modes.}
+\end{figure}
+
+Interpret the MAC matrix by looking for strong correlations between an expanded experimental shape and an FE mode. A high MAC value indicates similar shape patterns over the degrees of freedom included in the comparison; it does not, on its own, establish that the model is physically correct. Low or ambiguous correlations can result from mode pairing, insufficient measurement locations, mapping errors, different coordinate directions, or an unsuitable expansion basis.
+
+For a meaningful comparison, ensure that the experimental and FE shapes share corresponding node/direction degrees of freedom. Investigate unexpected MAC patterns rather than relying only on a single scalar value.
+\section{Save and restore a Workbench project}
+\label{sec:orge8917dd}
+
+Use \texttt{File -> Save workbench...} to save the session to a single \texttt{.sdwb} project file. The saved workbench archive can include the test geometry, FRFs, collected shapes, FE mesh and groups, FE geometry and modes, expanded shapes, node mappings, basis selection, and log information.
+
+To resume later, use \texttt{File -> Load workbench...} and select the saved \texttt{.sdwb} file. Loading a project replaces the current Workbench state; save your current work first if you need to keep it. The project format does not preserve the internal state of the PolyPy fitting interface, so retain any fitting-specific work separately if you need to reproduce or revisit those settings.
+
+The Workbench also has separate commands for loading and saving geometry and shapes. Use these when you need to exchange individual data objects rather than preserve a complete session.
+\section{Troubleshooting and good practice}
+\label{sec:orgc799883}
+
+\subsection{The FE mesh loads, but the expected sensor group is missing}
+\label{sec:orgd92c2dd}
+Check that the MED/RMED file actually contains the desired node or cell groups. If the mesh converter or export process did not preserve groups, use \texttt{Custom node IDs...} to define the FE sensor nodes explicitly.
+\subsection{The test geometry appears correct, but the SEREP result looks wrong}
+\label{sec:orgf808a9e}
+Recheck the test-to-FE node map, ordering, local coordinate systems, and response directions. Verify that the FE modes were computed for the same model and correspond to the loaded mesh. Revisit the selected expansion basis if the mapping is correct.
+\subsection{Mode shapes cannot be plotted on the geometry}
+\label{sec:orga54af99}
+Ensure that a test geometry exists and that the collected shapes use coordinates compatible with that geometry. FRF fitting can be performed without geometry, but geometry is needed for spatial shape visualization.
+\subsection{A tool reports an error}
+\label{sec:org719a07d}
+Read the Workbench log panel for the detailed traceback or diagnostic message. The GUI displays an error dialog for many menu/toolbar actions and records the exception in the log. Correct the underlying input or state before repeating the operation.
+\subsection{The plot or editor window is difficult to find}
+\label{sec:orgedc9d22}
+Use the \texttt{Window} menu to cascade or tile open windows, or switch to a tabbed view. The Workbench hosts SDynPy tool windows within its main workspace.
+\subsection{General recommendations}
+\label{sec:org677b07e}
+\begin{itemize}
+\item Keep an unchanged copy of the original FRF data and FE results.
+\item Record the node mapping and selected FE basis used for each expansion.
+\item Verify units, coordinate directions, channel ordering, and node identifiers before fitting or expansion.
+\item Treat symmetrization as an optional data-processing choice, not an automatic correction for noisy measurements.
+\item Save checkpoints to a \texttt{.sdwb} file after major stages of the workflow.
+\end{itemize}
+\section{Further information}
+\label{sec:org30f31e7}
+
+\begin{itemize}
+\item \href{https://sandialabs.github.io/sdynpy/}{SDynPy documentation}
+\item \href{https://sandialabs.github.io/sdynpy/sdynpy-polypy-gui/}{SDynPy PolyPy GUI documentation}
+\item \href{https://sandialabs.github.io/sdynpy/geometry/}{SDynPy geometry documentation}
+\item \href{https://open-simulation-center.org/fr/downloads/code\_aster/SALOME\_MECA}{Salome-Meca / Code\_Aster resources}
+\end{itemize}
+\end{document}

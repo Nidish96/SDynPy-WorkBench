@@ -3,7 +3,7 @@
 This is developed (with a lot of AI help) as a wrapper GUI frontend for SDynPy to make it easier for modal testing "on the field" without explicitly having to program all the intermediate steps.
 I do not claim correctness of any of this, but this is a tool I plan to use quite often for my work. The documentation is sparse and incomplete as of now, but the example files and the accompanying pdf document covers most of the main functionality. I typically use this with the LabVIEW VIs on my website (https://ae.iitm.ac.in/~nidish/#sec-NIVIs) which were created using NI-DAQmx and the NI Sound and Vibrations Toolkit.
 
-The example pdf may be found [[https://github.com/Nidish96/SDynPy-WorkBench/blob/main/example/example_usage.pdf][here]].
+The example pdf may be found [[https://github.com/Nidish96/SDynPy-WorkBench/blob/main/example/sdynpy_workbench_guide.pdf][here]].
 
 I hope to improve the documentation (and the code) in time.
 
