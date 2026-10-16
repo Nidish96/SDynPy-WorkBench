@@ -7,5 +7,8 @@ The example pdf may be found [[https://github.com/Nidish96/SDynPy-WorkBench/blob
 
 I hope to improve the documentation (and the code) in time.
 
-#+caption: A sample screenshot from the GUI
+#+caption: A sample screenshot from the GUI (SEREP basis choice)
 [[https://github.com/Nidish96/SDynPy-WorkBench/blob/main/example/figs/serepmodes.png]]
+
+#+caption: A sample screenshot from the GUI (overlay of expanded shape with test shape)
+https://github.com/Nidish96/SDynPy-WorkBench/blob/main/example/figs/overlay.png
