@@ -1,0 +1,141 @@
+#+title: SDynPy WorkBench
+#+subtitle: Example Usage
+#+author: Nidish Narayanaa Balaji
+#+date: October 16, 2026
+#+options: h:1 num:t toc:t
+#+latex_header: \usepackage[margin=1in]{geometry}
+#+latex_header: \usepackage[subrefformat=parens,labelformat=parens]{subcaption}
+
+#+latex_header: \usepackage{siunitx}
+#+latex_header: \usepackage{xcolor}
+#+latex_header: \usepackage{accents}
+#+latex_header: \usepackage{minted}
+#+latex_header: \usepackage{cancel}
+#+latex_header: \newcommand{\vc}[1]{\underbar{$#1$}}
+#+latex_header: \newcommand{\mx}[1]{\mathbf{\underline{\underbar{$#1$}}}\,}
+#+latex_header: \newcommand{\uc}[1]{\underaccent{\tilde}{#1}}
+#+latex_header: \newcommand{\mc}[1]{\underaccent{\approx}{#1}}
+#+latex_header: \usepackage{cleveref}
+
+* Introduction
+:PROPERTIES:
+:UNNUMBERED: t
+:END:
+This is an example usage of the GUI workbench built on top of [[https://sandialabs.github.io/sdynpy/][SDynPy]]. We employ modal testing data from an impact hammer based modal test conducted on a metallic bowl (2 sensors and 8 impact locations) in tandem with a finite element model of the same prepared using [[https://open-simulation-center.org/fr/downloads/code_aster/SALOME_MECA][Salome\_Meca]] (solver: Code\_Aster). We employ the finite element mode shapes to expand the experimental mode shapes through the System Equivalent Reduction Expansion Process (SEREP) implemented in SDynPy post the modal fitting.
+
+* Launch the Workbench
+#+begin_src shell
+  python3 sdynpy_workbench.py 
+#+end_src
+   
+#+name: fig:wb1
+#+attr_latex: :width 0.75\linewidth :placement [!h]
+#+caption: The Launching Screen for the Workbench
+[[file:figs/wb1.png]]
+
+[[Cref:fig:wb1]] shows the landing screen of the GUI. There are several ways to "get started" from here, you may choose to use one some of these. 
++ *You can load the measured FRFs* with the =Load FRFs= button and then go on to =Plot FRFs= and also =PolyPy= for the modal fitting. This will allow you to do the modal fitting but it is not possible to plot mode shapes or anything since no geometry was created. The modal analysis is based on the [[https://sandialabs.github.io/sdynpy/sdynpy-polypy-gui/][PolyPy GUI]] implemented in SDynPy. While loading, the workbench gives you an option of "symmetrizing" the measurements - this is sometimes helpful when measured data is noisy and does not obey reciprocity strictly. 
+
++ *You can manually create the test geometry* with =Geometry Editor= which allows you to type in nodal locations, define coordinates, and also define tracelines and elements. This is fully based on the [[https://sandialabs.github.io/sdynpy/geometry/][Geometry edit GUI]] implemented in SDynPy.
+
+  Once both the above are done, it will be possible to visualize mode-shapes through PolyPy. 
+
+* Load Geometry from an FE Mesh.
+
+We shall now load the geometry from an FE mesh and also define local coordinate systems at the sensor attachment locations. We can do this by:
+1. Click on =FE Mesh= and load up the MED file that has the mesh. We also have a node set which has the sensor locations of our test. In our example the "results" file =resu.rmed= stores the mesh also so this is loaded.
+
+   #+name: fig:femesh
+   #+attr_latex: :width 0.75\textwidth :placement [!h]
+   #+caption: GUI state after FE mesh is loaded
+   [[file:figs/femesh.png]]
+
+   [[Cref:fig:femesh]] shows the GUI state where the "Group_3" group has the relevant nodes.
+
+2. Click on =Test Geom= 
+
+   Now we shall create a test geometry using a subset of the nodes from the FE mesh coming from the above group. 
+
+   #+name: fig:testgeom
+   #+attr_latex: :width 0.75\textwidth :placement [!h]
+   #+caption: GUI state after =Test Geom=.
+   [[file:figs/testgeom.png]]
+
+   [[Cref:fig:testgeom]] shows the state of the GUI right after =Test Geom= is clicked.
+
+   1. Firstly (see 1 in figure) we click on "Add group" (also explore the other options) to highlight the relevant group;
+
+   2. Then (see 2 in figure) we reorder and renumber the nodes so they match the ordering used in the test;
+
+   3. Finally (see 3 in figure) we create the tracelines for visualizations and click on =Build test geometry=.
+
+   After this, clicking on =Geometry Editor= will show the test geometry that has been created, as shown in [[cref:fig:testgeomar]] below. We have also selected =Show DOF Arrows= to demonstrate that local coordinate systems have been appropriately defined.
+
+   #+name: fig:testgeomar
+   #+caption: The GUI state after =Geometry Editor= and then =Show DOF Arrows= are pressed.
+   #+attr_latex: :width 0.75\textwidth :placement [!h]
+   [[file:figs/testgeomar.png]]
+* Conduct the PolyPy modal fitting.
+
+Now we click on =PolyPy= to do the modal fitting. Read the SDynPy docs to see more. [[Cref:fig:polypy]] shows the GUI state at the end of the polypy fitting. 
+
+#+name: fig:polypy
+#+caption: The GUI state after the end of the PolyPy fitting
+#+attr_latex: :width 0.75\textwidth :placement [!h]
+[[file:figs/polypy.png]]
+
+* Visualize the mode shapes on the test geometry.
+
+We can visualize the mode shapes on the test geometry by clicking on =Plot Shapes= within the PolyPy subwindow. [[Cref:fig:testshapes]] shows the GUI state that also visualizes the first mode shape on the test geometry.
+
+#+name: fig:testshapes
+#+caption: The GUI state after =Plot Shapes= is clicked
+#+attr_latex: :width 0.75\textwidth :placement [!h]
+[[file:figs/pshapes.png]]
+
+We click on =Collect Shapes= on the top to accept the PolyPy fit. Note that this will be updated on the Project tree in the left. 
+   
+Next we shall move on to the *System Equivalent Reduction Expansion Process (SEREP)* for expanding the test shapes onto the shapes computed through FE. 
+
+* Renumber the node indices on the test geometry to match with the FE model
+
+Now the node indices on the test geometry do not match the node indices on the FE geometry. So we click on =Groups= to renumber the test nodes. (/note: you may have to re-load the FE mesh for this/)
+
+#+name: fig:renum
+#+caption: GUI state after clicking on =Groups=
+#+attr_latex: :width 0.75\textwidth :placement [!h]
+[[file:figs/renum.png]]
+
+[[Cref:fig:renum]] shows the GUI state after =Groups= is clicked. Now the table lists the nodes for renumbering - check this and then click on =Apply:renumber test FRFs/shapes/geometry=.
+   
+* Load the finite element mode shapes by clicking on =FE Modes=.
+
+We choose the "resu.rmed" file to load up the FE mode shapes by clicking on =FE Modes=. After this we may visualize the FE modes by =FE/SEREP->Plot FE Modes= just to visualize through SDynPy.
+
+* Click on the =SEREP= button to choose the modes to use for the SEREP
+
+[[Cref:fig:serepmodes]] shows the pop up that appears after the =SEREP= button is clicked. We can here choose which modes to use. I shall choose modes 7,8,9,10 and click Ok.
+   
+#+name: fig:serepmodes
+#+caption: GUI state after clicking on =SEREP=
+#+attr_latex: :width 0.75\textwidth :placement [!h]
+[[file:figs/serepmodes.png]]
+
+This would conduct the SEREP using the implementation in SDynPy and show the expanded mode shapes. Click on =Overlay= to visualize the expanded modeshapes along with the test geometry shapes. [[Cref:fig:overlay]] shows the overlaid modeshape.
+
+#+name: fig:overlay
+#+caption: Test and Expanded shapes overlaid. GUI state after clicking on =Overlay=
+[[file:figs/overlay.png]]
+
+* Inspect the Modal Assurance Criterion.
+
+You can do other things like the test-model MAC visualization by clicking on =FE/SEREP->Plot MAC:expanded vs FE modes=. [[Cref:fig:mac]] shows this for the current example.
+
+#+name: fig:mac
+#+caption: Expanded Test vs FE mode MACs.
+#+attr_latex: :width 0.75\textwidth :placement [!h]
+[[file:figs/mac.png]]
+
+* Saving the work/Loading historical work
+
+The complete session (except for the PolyPy internals) can be saved through =File->Save Workbench=. This can be helpful to continue from where on leaves off later.
