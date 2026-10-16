@@ -5,4 +5,7 @@ I do not claim correctness of any of this, but this is a tool I plan to use quit
 
 The example pdf may be found [[https://github.com/Nidish96/SDynPy-WorkBench/blob/main/example/example_usage.pdf][here]].
 
-I hope to improve the documentation (and the code) in time. 
+I hope to improve the documentation (and the code) in time.
+
+#+caption: A sample screenshot from the GUI
+[[https://github.com/Nidish96/SDynPy-WorkBench/blob/main/example/figs/serepmodes.png]]
