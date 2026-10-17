@@ -23,9 +23,21 @@ import time
 import functools
 import traceback
 
-if sys.platform.startswith('linux'):
-    os.environ.setdefault('QT_QPA_PLATFORM', 'xcb')   # must precede QApplication
+# if sys.platform.startswith('linux'):
+#     os.environ.setdefault('QT_QPA_PLATFORM', 'xcb')   # must precede QApplication
+if sys.platform.startswith('linux') and not os.environ.get('QT_QPA_PLATFORM'):
+    os.environ['QT_QPA_PLATFORM'] = 'xcb'      # '' (set but empty) now counts as "unset"
 
+# OpenGL surface format. Must be installed BEFORE sdynpy is imported: `import sdynpy`
+# creates the QApplication, and pyvistaqt >= 0.13 (QOpenGLWidget based) needs this
+# default before any top-level window exists, otherwise embedded 3-D views stay blank.
+from qtpy.QtGui import QSurfaceFormat
+try:
+    from pyvistaqt.rwi import _default_format
+    QSurfaceFormat.setDefaultFormat(_default_format())
+except Exception:                              # older pyvistaqt: nothing to do
+    pass
+    
 import numpy as np
 from qtpy.QtCore import Qt, QObject, QEvent, QTimer
 from qtpy.QtGui import QFont
@@ -99,7 +111,7 @@ class MdiHost(QObject):
     def __init__(self, main_window, mdi):
         super().__init__(main_window)
         self.main, self.mdi = main_window, mdi
-        self.embed_3d = True
+        self.embed_3d = False
         self.mdi.subWindowActivated.connect(
             lambda s: s is not None and s.widget() is not None and self._nudge(s.widget()))        
         QApplication.instance().installEventFilter(self)
@@ -409,6 +421,11 @@ class Workbench(ProjectMixin, SerepMixin, QMainWindow):
         self._timer.start(1000)                # editor edits geometry in place
         self.refresh_project()
         self.log('SDynPy {}  |  ready.'.format(getattr(sdn, '__version__', '')))
+
+        import qtpy, vtk, pyvista
+        self.log('Qt {} ({}) | platform {} | VTK {} | PyVista {}'.format(
+            qtpy.QT_VERSION, qtpy.API_NAME, QApplication.platformName(),
+            vtk.vtkVersion.GetVTKVersion(), pyvista.__version__))
 
     # ------------------------------------------------------------------ #
     # UI construction
@@ -927,14 +944,18 @@ def main():
         QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
     except Exception:                          # noqa: BLE001
         pass
-    try:    
-        QApplication.setAttribute(Qt.AA_ShareOpenGLContexts, True)
-    except Exception:                          # noqa: BLE001
-        pass        
+    # try:    
+    #     QApplication.setAttribute(Qt.AA_ShareOpenGLContexts, True)
+    # except Exception:                          # noqa: BLE001
+    #     pass
+    
     app = QApplication.instance() or QApplication(sys.argv)   # BEFORE any SDynPy GUI call
     app.setStyle('Fusion')
     win = Workbench()
     win.show()
+    f = win.windowHandle().format()
+    win.log('Main window GL format: {}.{} profile={}'.format(
+        f.majorVersion(), f.minorVersion(), int(f.profile())))
     sys.exit(app.exec_())
 
 
